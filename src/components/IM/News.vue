@@ -6,11 +6,11 @@
 			</span>
 			<div class="tc-news-header-content">
 				<span class="tc-news-header-group" v-show="isGroup" @click="openGroupData()">
-					<img src="./../assets/images/group.png" alt="">
+					<img src="@/assets/images/IM/group.png" alt="">
 					<span>群成员</span>
 				</span>
 				<span class="tc-news-close" @click="handleClose">
-					<img src="../assets/images/close.png" alt="">
+					<img src="@/assets/images/IM/close.png" alt="">
 				</span>
 			</div>
 		</div>
@@ -18,71 +18,101 @@
 			<div class="tc-news-left">
 				<div class="tc-news-search">
 					<div class="tc-news-search-box">
-						<img class="tc-news-searchicon" src="./../assets/images/search.png" alt="">
-						<input class="tc-news-input" v-model="inputVal" :placeholder="inputPlaceholder" type="text" @input="changeInput(inputVal)">
+						<img class="tc-news-searchicon" src="@/assets/images/IM/search.png" alt="">
+						<input class="tc-news-input" v-model="inputVal" :placeholder="inputPlaceholder" type="text">
 					</div>
 				</div>
 				<ul class="tc-news-list">
-					<li class="tc-news-list-item" @click="itemClick(item.conversationID, userList, item)" :class="item.checked ? 'tc-news-list-item-active' : ''" v-for="(item, index) in userList" :key="index">
-						<div class="tc-news-list-box">
-							<img class="tc-news-list-user-photo" :src="item.type == 'GROUP' ? (item.groupProfile.avatar || defaultGroup) : (item.userProfile.avatar || defaultUser)" alt="">
-							<div class="tc-news-list-user-content">
-								<div class="tc-news-list-user-title">
-									<span class="tc-news-list-user-name">
-										{{ item.type == 'GROUP' ? item.groupProfile.name : item.userProfile.nick }}
-									</span>
-									<span class="tc-news-list-user-code" v-if="item.positionType == 1">
-										{{ item.vehicleCode }}
+					<!-- TODO -->
+					<!-- 当前只显示群聊通知和个人通知 -->
+					<li @click="itemClick(item.conversationID, userList, item)" v-for="(item, index) in userList" :key="index">
+						<div class="tc-news-list-item" :class="item.checked ? 'tc-news-list-item-active' : ''" v-if="(item.type == 'GROUP') ? (item.groupProfile.name.indexOf(inputVal) != -1) : (item.type == 'C2C') ? (item.userProfile.nick.indexOf(inputVal) != -1) : false">
+							<div class="tc-news-list-box">
+								<img class="tc-news-list-user-photo" :src="item.type == 'GROUP' ? (item.groupProfile.avatar || defaultGroup) : (item.userProfile.avatar || defaultUser)" alt="">
+								<div class="tc-news-list-user-content">
+									<div class="tc-news-list-user-title">
+										<span class="tc-news-list-user-name">
+											{{ item.type == 'GROUP' ? item.groupProfile.groupName : item.userProfile.nick }}
+										</span>
+										<span v-if="item.type == 'C2C' && item.userProfile.carNumber" class="tc-news-list-user-car">
+											{{ item.userProfile.carNumber }}
+										</span>
+										<span class="tc-news-list-user-code" v-if="item.positionType == 1">
+											{{ item.vehicleCode }}
+										</span>
+									</div>
+									<span class="tc-news-msg" :class="item.lastMessage.payload && item.lastMessage.payload.text ? '' : 'tc-news-msg-voice'">
+										{{ item.lastMessage.payload && item.lastMessage.payload.description == 'voice' ? '[语音]' : item.lastMessage.messageForShow }}
 									</span>
 								</div>
-								<span class="tc-news-msg" :class="item.lastMessage.payload && item.lastMessage.payload.text ? '' : 'tc-news-msg-voice'">
-									{{ item.lastMessage.payload.description == 'voice' ? '[语音]' : item.lastMessage.messageForShow }}
-								</span>
 							</div>
-						</div>
-						<!-- {{ item.unreadCount }} -->
-						<div class="tc-news-msg-hint" v-if="item.unreadCount != 0">
-							{{ item.unreadCount > 99 ? 99 : item.unreadCount }}
-						</div>
-						<div class="tc-news-list-time" v-else>
-							{{ item.lastMessage.endMsgTime }}
+							<!-- {{ item.unreadCount }} -->
+							<div class="tc-news-msg-hint" v-if="item.unreadCount != 0">
+								{{ item.unreadCount > 99 ? 99 : item.unreadCount }}
+							</div>
+							<div class="tc-news-list-time" v-else>
+								{{ item.lastMessage.endMsgTime }}
+							</div>
 						</div>
 					</li>
 				</ul>
 			</div>
 			<div class="tc-news-center" v-if="isChatWindow">
 				<div class="tc-news-center-im" ref="im-dialogue">
+					<div class="more" v-if="!isCompleted" v-loading="moreLoading" element-loading-text="拼命加载中" element-loading-spinner="el-icon-loading" element-loading-background="rgba(0, 0, 0, 0.6)">
+						<el-button type="text" @click="getMessageList(conversationID)">查看更多</el-button>
+					</div>
+					<div class="no-more" v-else>没有更多了</div>
 					<message-item v-for="(item, i) in messageList" :isGroup="isGroup" @userImg="handleUserImg" :messgeItem="item" :key="i"></message-item>
 				</div>
 				<div class="tc-news-center-bottom">
-					<toolbar @voice="handleVoice"></toolbar>
+					<toolbar :dialogueData="dialogueData" :isGroup="isGroup" @voice="handleVoice" @sendSuccess="sendSuccess"></toolbar>
 					<message-send :baseUrl="baseUrl" :params="params" :dialogueData="dialogueData" :voice="voice" :ouid="ouid" :isGroup="isGroup" @sendSuccess="sendSuccess"></message-send>
 				</div>
 			</div>
 		</div>
-		<group-info :groupStatus.sync="groupStatus" :dialogueData="dialogueData" :isGroup="isGroup" :groupUserList="groupUserList" @openUserDialog="openUserDialog"></group-info>
-		<Dialog :visible.sync="personalVisible" :before-close="handleClose">
+		<group-info :groupStatus.sync="groupStatus" :dialogueData="dialogueData" :isGroup="isGroup" :groupUserList="groupUserList" @exitGroup="exitGroup" @openUserDialog="openUserDialog"></group-info>
+		<Dialog :visible.sync="personalVisible">
 			<personal-data :userData="userData" @handlePersonalClose="handlePersonalClose" @send="sendMsg"></personal-data>
 		</Dialog>
-
 	</div>
 </template>
 
 <script>
 
-import Dialog from '@/components/Dialog.vue';
-import personalData from '@/components/personalData.vue';
-import MessageItem from '@/components/MessageItem.vue';
-import MessageSend from '@/components/MessageSend.vue';
+import Dialog from './Dialog.vue';
+import personalData from './personalData.vue';
+import MessageItem from './MessageItem.vue';
+import MessageSend from './MessageSend.vue';
 
-import GroupInfo from '@/components/GroupInfo.vue';
-import Toolbar from '@/components/Toolbar.vue';
+import GroupInfo from './GroupInfo.vue';
+import Toolbar from './Toolbar.vue';
 
-import defaultGroup from '@/assets/images/defaultGroup.png';
-import defaultUser from '@/assets/images/defaultUser.png';
+import defaultGroup from '@/assets/images/IM/defaultGroup.png';
+import defaultUser from '@/assets/images/IM/defaultUser.png';
 import axios from 'axios';
 
-// import { translateGroupSystemNotice } from '../utils/common';
+Date.prototype.format = function (format) {
+	let date = {
+		"M+": this.getMonth() + 1,
+		"d+": this.getDate(),
+		"h+": this.getHours(),
+		"m+": this.getMinutes(),
+		"s+": this.getSeconds(),
+		"q+": Math.floor((this.getMonth() + 3) / 3),
+		"S+": this.getMilliseconds()
+	};
+	if (/(y+)/i.test(format)) {
+		format = format.replace(RegExp.$1, (this.getFullYear() + '').substr(4 - RegExp.$1.length));
+	}
+	for (let k in date) {
+		if (new RegExp("(" + k + ")").test(format)) {
+			format = format.replace(RegExp.$1, RegExp.$1.length == 1 ?
+				date[k] : ("00" + date[k]).substr(("" + date[k]).length));
+		}
+	}
+	return format;
+}
 
 export default {
 	name: 'NewsList',
@@ -93,6 +123,15 @@ export default {
 				return {}
 			}
 		},
+		loginData: {
+			type: Object,
+			default() {
+				return {
+					userID: "",
+					userSig: ""
+				}
+			}
+		},
 		baseUrl: {
 			type: String,
 			default: ""
@@ -101,9 +140,18 @@ export default {
 			type: String,
 			default: "标题"
 		},
+		// 快捷通话需要
+		userID: {
+			type: String,
+			default: ""
+		},
 		inputPlaceholder: {
 			type: String,
 			default: ""
+		},
+		visible: {
+			type: Boolean,
+			default: false
 		}
 	},
 	components: {
@@ -116,6 +164,7 @@ export default {
 	},
 	data() {
 		return {
+			moreLoading: false,
 			// 默认群组头像
 			defaultGroup: defaultGroup,
 			// 默认个人头像
@@ -139,18 +188,16 @@ export default {
 			dialogueData: {},
 			// 当前聊天对象
 			ouid: '',
+			// 群聊快捷发送消息-确认是否为新会话
 			isNewDialogue: false,
 			sw_userList: [],
 			nextReqMessageID: '',
 			isCompleted: '',
-			voice: false
+			// 切换发送语音
+			voice: false,
+			// 当前会话ID
+			conversationID: ''
 		}
-	},
-	mounted() {
-		this.$store.dispatch('login').then(() => {
-			// 登录成功初始化-聊天
-			this.initListener();
-		})
 	},
 	methods: {
 		handleVoice(voice) {
@@ -174,6 +221,7 @@ export default {
 				console.log(event, '收到新消息');
 				// 如果消息来自当前聊天方
 				this.setMessageList(event.data);
+				this.$emit('dialogue', event.data)
 			})
 			// 会话列表更新
 			this.tim.on(this.TIM.EVENT.CONVERSATION_LIST_UPDATED, event => {
@@ -214,17 +262,17 @@ export default {
 			// 猪一样的队友
 		},
 		handleClose() {
+			if (this.userList.length) {
+				this.userList.forEach(item => {
+					item.checked = false;
+				})
+			}
+			this.isChatWindow = false;
 			this.$emit('close', false);
 		},
 		// 关闭个人信息弹框
 		handlePersonalClose() {
 			this.personalVisible = false;
-		},
-		changeInput(val) {
-			if (this.timeout !== null) clearTimeout(this.timeout)
-			this.timeout = setTimeout(() => {
-				this.$emit('input', val)
-			}, 1000)
 		},
 		// 点击个人资料发送消息
 		sendMsg(obj) {
@@ -250,6 +298,7 @@ export default {
 				obj.lastMessage = {};
 				this.ouid = obj.userID;
 				this.dialogueData = obj;
+				this.isCompleted = 1;
 				this.userList.push(obj);
 				this.itemClick(obj.userID, this.userList, obj, 1);
 			}
@@ -259,7 +308,7 @@ export default {
 			// 当然列表是否存在此用户
 			let flag = false;
 			list.forEach((res, index) => {
-				if (res.conversationID == id) {
+				if (res.conversationID && res.conversationID == id) {
 					i = index;
 					flag = true;
 					this.ouid = id;
@@ -277,6 +326,8 @@ export default {
 			if (!this.isChatWindow) {
 				this.isChatWindow = true;
 			}
+			// 切换会话清空聊天记录
+			this.messageList = [];
 			if (flag) {
 				list[i].checked = true;
 				this.groupStatus = false;
@@ -290,7 +341,8 @@ export default {
 				} else {
 					this.isGroup = false;
 					// 个人会话，直接获取聊天记录
-					this.getMessageList(list[i].conversationID);
+					this.conversationID = list[i].conversationID;
+					this.getMessageList(this.conversationID);
 				}
 				// 当前群消息存在未读消息
 				if (list[i].unreadCount) {
@@ -301,32 +353,41 @@ export default {
 			}
 			if (list[i].type == 'C2C') {
 				// 获取当前对话人的信息
-				this.$store.commit('getUserInfo', list[i].userProfile.userID)
+				this.$store.commit('getUserInfo', list[i].userProfile)
 			}
 			if (type) {
 				this.isNewDialogue = true;
-				this.messageList = [];
 			} else {
 				this.isNewDialogue = false;
-				this.messageList = [];
 			}
 		},
 		// 获取当前点击用户的聊天记录
 		getMessageList(conversationID) {
-			this.tim.getMessageList({ conversationID: conversationID, count: 30 }).then((imResponse) => {
+			let obj = {
+				conversationID: conversationID,
+				count: 15
+			}
+			if (this.messageList.length) {
+				this.moreLoading = true;
+				obj.nextReqMessageID = this.nextReqMessageID;
+			}
+			this.tim.getMessageList(obj).then((imResponse) => {
 				// 获取成功
-				let obj = imResponse.data
+				let objData = imResponse.data;
 				if (this.messageList.length) {
-					obj.messageList.forEach(item => {
+					objData.messageList.reverse();
+					objData.messageList.forEach(item => {
 						this.messageList.unshift(item);
 					})
+					this.moreLoading = false;
 				} else {
-					this.messageList = obj.messageList; // 消息列表。
+					this.messageList = objData.messageList; // 消息列表。
 					this.scrollBottom();
 				}
-				this.nextReqMessageID = obj.nextReqMessageID; // 用于续拉，分页续拉时需传入该字段。
-				this.isCompleted = obj.isCompleted; // 表示是否已经拉完所有消息。
-				this.setUserInfo(this.messageList, obj.messageList.length);
+				this.nextReqMessageID = objData.nextReqMessageID; // 用于续拉，分页续拉时需传入该字段。
+				this.isCompleted = objData.isCompleted; // 表示是否已经拉完所有消息。
+				// 是否首次加载 this.messageList.length == objData.messageList.length ? 0 : objData.messageList.length
+				this.setUserInfo(this.messageList, this.sw_userList, (this.messageList.length == objData.messageList.length ? 0 : objData.messageList.length));
 			}).catch((imError) => {
 				console.warn('getConversationProfile error:', imError); // 获取会话资料失败的相关信息
 			});
@@ -353,32 +414,32 @@ export default {
 						str += item.userID;
 					}
 				})
-				this.getUserListInfo(str, obj);
+				// 设置成员信息及获取聊天记录设置用户资料
+				this.getUserListInfo(str, (res) => {
+					this.sw_userList = res.list;
+					this.setUserInfo(this.groupUserList, this.sw_userList);
+					this.conversationID = obj.conversationID;
+					this.getMessageList(this.conversationID);
+				});
 			})
 		},
 		// 获取用户信息-思伟后台
-		getUserListInfo(str, obj) {
+		getUserListInfo(str, callback) {
 			this.params.imUserIds = str;
 			axios({
 				method: 'get',
 				url: this.baseUrl + 'group/getuserinfo',
 				params: this.params
 			}).then(res => {
-				this.sw_userList = res.data.result.list;
-				this.setUserInfo(this.groupUserList);
-				this.getMessageList(obj.conversationID);
+				callback(res.data.result);
 			})
 		},
-		setUserInfo(list, len = 0) {
-			console.log(len)
-			let [...userList] = this.sw_userList;
-			for (let i = 0; i < list.length; i++) {
+		setUserInfo(list, olist, len = 0) {
+			let [...userList] = olist;
+			for (let i = 0; i < (list.length - len); i++) {
 				for (let j = 0; j < userList.length; j++) {
 					if ((list[i].userID ? list[i].userID : list[i].from) == userList[j].imUserId) {
-						list[i].job = userList[j].job;
-						list[i].companyName = userList[j].companyName;
-						list[i].carNumber = userList[j].carNumber;
-						list[i].tel = userList[j].tel;
+						this.setUserData(list[i], userList[j]);
 						if (list[i].userID) {
 							userList.splice(j, 1);
 						}
@@ -387,15 +448,54 @@ export default {
 				}
 			}
 		},
+		setUserData(obj, userObj) {
+			this.$set(obj, 'job', userObj.job);
+			this.$set(obj, 'companyName', userObj.companyName);
+			this.$set(obj, 'carNumber', userObj.carNumber);
+			this.$set(obj, 'tel', userObj.tel);
+			this.$set(obj, 'avatar', userObj.userPhoto);
+		},
+		// 获取群组名称
+		getGroupListInfo(id, callback) {
+			this.params.userId = id;
+			axios({
+				method: 'get',
+				url: this.baseUrl + '/group/list',
+				params: this.params
+			}).then(res => {
+				callback(res.data.result);
+			})
+		},
+		setGroupListInfo(groupList, val) {
+			let [...list] = groupList;
+			for (let i = 0; i < val.length; i++) {
+				if (val[i].type == 'GROUP') {
+					for (let j = 0; j < list.length; j++) {
+						if (val[i].groupProfile.groupID == list[j].imGroupId) {
+							this.$set(val[i].groupProfile, 'groupName', list[j].name);
+							// val[i].groupProfile.groupPhoto = item.groupPhoto;
+							list.splice(j, 1);
+							break;
+						}
+					}
+				}
+			}
+		},
 		// 打开群资料
 		openGroupData() {
 			this.groupStatus = true;
 		},
-		// 关闭群资料
-		closeGroupData() {
-			this.groupStatus = false;
+		// 退出群聊更新聊天
+		exitGroup() {
+			console.log('退出群聊成功');
+			for (let i = 0; i < this.userList.length; i++) {
+				let item = this.userList[i];
+				if (item.type == 'C2C' || item.type == 'GROUP') {
+					this.itemClick(item.conversationID, this.userList, item);
+					break;
+				}
+			}
 		},
-
 		// 打开用户信息
 		openUserDialog(item) {
 			this.personalVisible = true;
@@ -424,7 +524,9 @@ export default {
 		scrollBottom() {
 			this.$nextTick(() => {
 				let container = this.$el.querySelector(".tc-news-center-im");
-				container.scrollTop = container.scrollHeight;
+				if (container) {
+					container.scrollTop = container.scrollHeight;
+				}
 			})
 		},
 		// 查看用户详细资料
@@ -435,10 +537,47 @@ export default {
 					this.userData = res;
 				}
 			})
+		},
+		logout() {
+			this.tim.logout().then(imResponse => {
+				console.log(imResponse); // 登出成功
+				this.$emit('logout', true);
+			});
 		}
 	},
 	watch: {
+		visible(val) {
+			if (val) {
+				this.scrollBottom();
+			}
+		},
+		userID(val) {
+			let time = setInterval(() => {
+				if (this.$store.state.user.isSDKReady) {
+					this.tim.getUserProfile({
+						userIDList: [val]
+					}).then((res) => {
+						// 外部快捷发送消息
+						this.isCompleted = 1;
+						this.sendMsg(res.data[0]);
+					}).catch((imError) => {
+						console.warn('getUserProfile error:', imError); // 获取其他用户资料失败的相关信息
+					});
+					clearTimeout(time);
+				}
+			}, 300)
+		},
+		'loginData.userSig': {
+			handler: function () {
+				this.$store.dispatch('login', this.loginData).then(() => {
+					// 登录成功初始化-聊天
+					this.initListener();
+				})
+			},
+			deep: true
+		},
 		userList(val) {
+			let str = '';
 			val.forEach(obj => {
 				let item = obj.lastMessage;
 				if (item.lastTime && !isNaN(item.lastTime)) {
@@ -449,7 +588,37 @@ export default {
 						item.endMsgTime = new Date(item.lastTime * 1000).format('hh:mm')
 					}
 				}
+				if (obj.type == 'C2C') {
+					if (!obj.userProfile.tel) {
+						str += obj.userProfile.userID + ',';
+					}
+				}
 			})
+			if (str) {
+				str = str.substring(0, str.length - 1);
+				this.getUserListInfo(str, (res) => {
+					let userList = res.list;
+					for (let i = 0; i < val.length; i++) {
+						if (val[i].type == 'C2C') {
+							for (let j = 0; j < userList.length; j++) {
+								if (val[i].userProfile.userID == userList[j].imUserId) {
+									this.setUserData(val[i].userProfile, userList[j]);
+									userList.splice(j, 1);
+									break;
+								}
+							}
+						}
+					}
+				});
+			}
+			if (this.groupList.length) {
+				this.setGroupListInfo(this.groupList, val);
+			} else {
+				this.getGroupListInfo(this.loginData.userID, (res) => {
+					this.groupList = res.groups;
+					this.setGroupListInfo(this.groupList, val);
+				});
+			}
 		}
 	}
 }
@@ -529,6 +698,9 @@ span {
 				height: 18px;
 				top: 9px;
 				left: 10px;
+			}
+			.tc-news-list-user-name {
+				width: 165px;
 			}
 			.tc-news-search-box {
 				position: relative;
@@ -616,6 +788,13 @@ span {
 				color: #fff;
 				font-size: 12px;
 			}
+			.tc-news-list-user-car {
+				color: #fff;
+				padding: 0 8px;
+				background: #8bc33e;
+				border-radius: 4px;
+				margin-left: 8px;
+			}
 		}
 		.tc-news-center {
 			width: 400px;
@@ -627,93 +806,17 @@ span {
 			}
 		}
 	}
-
-	.tc-news-group-box {
-		position: absolute;
-		top: 0;
-		right: -260px;
-		background: #fff;
-		width: 260px;
-		height: 600px;
-		box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.2);
-		border-radius: 0px 4px 4px 0px;
-		.tc-news-group-header {
-			height: 50px;
-			border-bottom: 1px solid #e8e8e8;
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			padding: 0 14px;
-		}
-		.tc-news-group-header-close {
-			color: #007aff;
-			cursor: pointer;
-			font-size: 14px;
-		}
-		.tc-news-group-list {
-			display: flex;
-			flex-wrap: wrap;
-			height: 460px;
-			overflow: auto;
-			&::-webkit-scrollbar {
-				width: 8px;
-			}
-			&::-webkit-scrollbar-track {
-				background-color: transparent;
-			}
-			&::-webkit-scrollbar-thumb {
-				background: #ddd;
-				border-radius: 5px;
-			}
-			.tc-news-group-item {
-				padding: 10px;
-				flex: 1;
-				text-align: center;
-				cursor: pointer;
-				img {
-					width: 40px;
-					height: 40px;
-					border-radius: 20px;
-				}
-				.tc-news-group-name {
-					text-align: center;
-					margin-top: 5px;
-					font-size: 12px;
-					width: 42px;
-					overflow: hidden;
-					text-overflow: ellipsis;
-					white-space: nowrap;
-				}
-			}
-		}
-		.tc-news-group-content {
-			position: relative;
-			height: 549px;
-		}
-		.tc-news-group-exit {
-			margin: 0 14px;
-			width: 232px;
-			bottom: 14px;
-			position: absolute;
-			cursor: pointer;
-			text-align: center;
-			border-radius: 4px;
-			color: #1f57b3;
-			font-size: 14px;
-			height: 28px;
-			line-height: 28px;
-			border: 1px solid #1f57b3;
-		}
+	.more {
+		display: flex;
+		justify-content: center;
+		font-size: 12px;
 	}
-	.group-fade-enter-active {
-		transition: all 0.5s ease;
-	}
-	.group-fade-leave-active {
-		transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
-	}
-	.group-fade-enter,
-	.group-fade-leave-to {
-		transform: translateY(-20px);
+	.no-more {
+		display: flex;
+		justify-content: center;
+		font-size: 12px;
+		color: #999;
+		padding: 12px 20px;
 	}
 }
 </style>

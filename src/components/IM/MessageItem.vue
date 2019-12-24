@@ -2,16 +2,22 @@
 	<div class="tc-message-item">
 		<div class="position" :class="messgeItem.flow == 'in' ? 'position-left' : 'position-right'">
 			<div class="tc-col-1">
-				<img @click="userImgAction(messgeItem)" :src="messgeItem.flow == 'in' ? (dialogueUserData.avatar ? dialogueUserData.avatar : defaultUser) : (userData.avatar ? userData.avatar : defaultUser)">
+				<img v-if="isGroup" @click="userImgAction(messgeItem)" :src="messgeItem.flow == 'in' ? (messgeItem && messgeItem.avatar ? messgeItem.avatar : defaultUser) : (userData && userData.avatar ? userData.avatar : defaultUser)">
+				<img v-else @click="userImgAction(messgeItem)" :src="messgeItem.flow == 'in' ? (dialogueUserData && dialogueUserData.avatar ? dialogueUserData.avatar : defaultUser) : (userData && userData.avatar ? userData.avatar : defaultUser)">
 			</div>
 			<div class="tc-col-2">
 				<div class="tc-col-2-title">
 					<span v-if="messgeItem.flow == 'in'">{{ isGroup ? messgeItem.nick : dialogueUserData.nick }}</span>
 					<span v-else>{{ userData.nick }}</span>
-					<template v-if="messgeItem.flow == 'in'">
+					<template v-if="messgeItem.flow == 'in' && isGroup">
 						<span class="tc-col-2-sp tc-col-2-sp-green" v-if="messgeItem.carNumber">{{ messgeItem.carNumber }}</span>
 						<span class="tc-col-2-sp tc-col-2-sp-fff" v-if="messgeItem.job">{{ messgeItem.job }}</span>
 						<span class="tc-col-2-sp tc-col-2-sp-blue" v-if="messgeItem.companyName">{{ messgeItem.companyName }}</span>
+					</template>
+					<template v-if="messgeItem.flow == 'in' && !isGroup">
+						<span class="tc-col-2-sp tc-col-2-sp-green" v-if="dialogueUserData.carNumber">{{ dialogueUserData.carNumber }}</span>
+						<span class="tc-col-2-sp tc-col-2-sp-fff" v-if="dialogueUserData.job">{{ dialogueUserData.job }}</span>
+						<span class="tc-col-2-sp tc-col-2-sp-blue" v-if="dialogueUserData.companyName">{{ dialogueUserData.companyName }}</span>
 					</template>
 				</div>
 				<div class="tc-col-2-box">
@@ -19,7 +25,7 @@
 					</messageImage>
 					<messageText v-else-if="messgeItem.type == 'TIMTextElem'" :message="messgeItem.payload">
 					</messageText>
-					<messageVoice v-else-if="messgeItem.type == 'TIMSoundElem'" :message="messgeItem.payload">
+					<messageVoice v-else-if="(messgeItem.type == 'TIMSoundElem' || (messgeItem.type == 'TIMCustomElem' && messgeItem.payload.description == 'voice'))" :flow="messgeItem.flow" :message="messgeItem.payload">
 					</messageVoice>
 					<messageUndefined v-else :message="messgeItem.payload">
 					</messageUndefined>
@@ -30,11 +36,11 @@
 </template>
 
 <script>
-import messageImage from '@/components/message/messageImage';
-import messageText from '@/components/message/messageText';
-import messageVoice from '@/components/message/messageVoice';
-import messageUndefined from '@/components/message/messageUndefined';
-import defaultUser from '@/assets/images/defaultUser.png';
+import messageImage from './message/messageImage';
+import messageText from './message/messageText';
+import messageVoice from './message/messageVoice';
+import messageUndefined from './message/messageUndefined';
+import defaultUser from '@/assets/images/IM/defaultUser.png';
 
 export default {
 	name: 'MessageItem',
@@ -66,9 +72,14 @@ export default {
 	},
 	created() {
 		this.userData = this.$store.state.user.userData;
-		setTimeout(() => {
-			this.dialogueUserData = this.$store.state.user.dialogueUserData;
-		}, 1000)
+	},
+	mounted() {
+		this.$nextTick(() => {
+			let data = this.$store.state.user.dialogueUserData;
+			for (let key in data) {
+				this.$set(this.dialogueUserData, key, data[key]);
+			}
+		})
 	},
 	methods: {
 		userImgAction(item) {

@@ -12,12 +12,15 @@ const user = {
       state.userData = userData;
       console.log(userData, '个人信息')
     },
-    getUserInfo(state, id) {
+    getUserInfo(state, obj) {
       tim.getUserProfile({
-        userIDList: [id]
+        userIDList: [obj.userID]
       }).then(res => {
         state.dialogueUserData = res.data[0];
-        console.log(state, '>>>>>>>');
+        state.dialogueUserData.job = obj.job;
+        state.dialogueUserData.companyName = obj.companyName;
+        state.dialogueUserData.carNumber = obj.carNumber;
+        state.dialogueUserData.tel = obj.tel;
       })
     },
     toggleIsLogin(state, isLogin) {
@@ -28,21 +31,21 @@ const user = {
     },
     reset(state) {
       Object.assign(state, {
-        currentUserProfile: {},
         isLogin: false,
         isSDKReady: false // TIM SDK 是否 ready
       })
     }
   },
   actions: {
-    login(context) {
+    login(context, obj) {
       return new Promise((resolve) => {
         tim
           .login({
-            userID: 'TC1267',
-            userSig: 'eJxNjcFOg0AURf*FbY3OGzpMNemiUKWkKKGlrEwIMEN5oIAwVajx3yWkjW7Pybn3Wwvc-W2cpvWpUpEaGqk9aES7mTAKWSnMULYjDCygBr*YuGlQRLGK9Fb8CzpRRpMaGcwJAYAFXVyk7BtsZRRnatoDxhgl5Jp*yrbDuhoFJcCA6oT8SYXvckq4Yej3nML1D48jfn70LWez2uRhX5g8WQd2552-9Kes8L3C2frB0O9cK2sU5EHqzsIVmi*intcEe7p7vbO9kx3m9aEEB7YfVTKsjyx-M8uk4DMrRH*51H5*Ae7kV6I_'
+            userID: obj.userID,
+            userSig: obj.userSig
           })
           .then((res) => {
+            console.log(res);
             context.commit('toggleIsLogin', true)
             // window.$message({
             //   type: 'success',

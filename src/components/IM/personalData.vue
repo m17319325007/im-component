@@ -3,7 +3,7 @@
 		<div class="tc-personal-header">
 			<div class="tc-personal-header-content">
 				<span class="tc-personal-close" @click="handlePersonalClose">
-					<img src="../assets/images/goBack.png" alt=""> 返回
+					<img :src="goBack" alt=""> 返回
 				</span>
 			</div>
 		</div>
@@ -51,6 +51,7 @@
 </template>
 
 <script>
+import goBack from '@/assets/images/IM/goBack.png';
 
 export default {
 	name: 'personalData',
@@ -60,6 +61,11 @@ export default {
 			default() {
 				return {}
 			}
+		}
+	},
+	data() {
+		return {
+			goBack: goBack
 		}
 	},
 	methods: {

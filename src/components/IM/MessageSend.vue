@@ -5,7 +5,7 @@
 			<div class="voice-box">
 				<div class="voice-border"  @mousedown.prevent="mouseStart"  @mouseup.prevent="mouseEnd">
 					<canvas id="myCanvas">当前浏览器不支持canvas组件请升级！</canvas>
-					<img src="../assets/images/voiceBig.png" alt="">
+					<img src="@/assets/images/IM/voiceBig.png" alt="">
 					<span class="voice-hint" v-if="isVoiceHint != 0">
 						长按录音
 					</span>
@@ -34,8 +34,7 @@
 
 <script>
 /* eslint-disable */
-import recording from '@/utils/TCRecorder.js';
-import ImButt from '@/api/imbutt';
+import { MP3Recorder } from '@/utils/recordermp3.js';
 import axios from 'axios';
 export default {
 	name: 'MessageSend',
@@ -71,6 +70,7 @@ export default {
 	},
 	data() {
 		return {
+			src: '',
 			val: '',
 			isVoiceHint: 1,
 			isVoice: false,
@@ -92,20 +92,38 @@ export default {
 			fd: null,
 			ctx: null,
 			canvas: null,
-			voiceNum: 0
+			voiceNum: 0,
+			recorder: null,
+			stream: ""
 		}
 	},
 	created() {
-		this.isVoiceHint = localStorage.getItem('tc-im-isVoiceHint');
+		if (localStorage.getItem('tc-im-isVoiceHint')) {
+			this.isVoiceHint = localStorage.getItem('tc-im-isVoiceHint');
+		}
 	},
 	mounted() {
 		// 初始化开启录音权限
 		this.$nextTick(() => {
-			recording.get(rec => {
-				this.recorder = rec
-			})
-		})
+			try {
+				window.AudioContext = window.AudioContext || window.webkitAudioContext;
+				navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+				window.URL = window.URL || window.webkitURL;
 
+				var audio_context = new AudioContext;
+				console.log('navigator.getUserMedia ' + (navigator.getUserMedia ? 'available.' : 'not present!'));
+			} catch (e) {
+				alert('No web audio support in this browser!');
+			}
+
+			navigator.getUserMedia({ audio: true }, (stream) => {
+				this.stream = stream;
+				this.recorder = new MP3Recorder(stream);
+				console.log('初始化完成');
+			}, function (e) {
+				console.log('No live audio input: ' + e);
+			});
+		})
 	},
 	watch: {
 		ouid() {
@@ -132,6 +150,10 @@ export default {
 		},
 		// 长按说话
 		mouseStart() {
+			if (!this.recorder) {
+				this.$message.error('未找到请求设备');
+				return;
+			}
 			// 首次提示 长按录音
 			if (this.isVoiceHint) {
 				this.isVoiceHint = 0;
@@ -141,30 +163,28 @@ export default {
 			this.clearTimer()
 			this.startTime = new Date().getTime()
 			this.toCanvas('myCanvas', 120)
-			recording.get((rec) => {
-				// 当首次按下时，要获取浏览器的麦克风权限，所以这时要做一个判断处理
-				if (rec) {
-					this.recorder = rec
-					this.interval = setInterval(() => {
-						if (this.num <= 0) {
-							this.recorder.stop()
-							this.num = 60
-							this.clearTimer()
-						} else {
-							this.num--
-							this.voiceNum = 60 - this.num;
-							this.recorder.start()
-						}
-					}, 1000)
+			this.interval = setInterval(() => {
+				if (this.num <= 0) {
+					this.recorder.stop()
+					this.num = 60
+					this.clearTimer()
+				} else {
+					this.num--
+					this.voiceNum = 60 - this.num;
+					this.recorder.start()
 				}
-			})
+			}, 1000)
 		},
 		// 松开时上传语音
 		mouseEnd() {
+			if (!this.recorder) {
+				return;
+			}
 			this.clearTimer();
 			if (this.voiceNum < 1) {
 				this.$message.warning("说话时间太短");
 				this.voiceNum = 0;
+				this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 				return;
 			}
 			this.endTime = new Date().getTime();
@@ -172,29 +192,20 @@ export default {
 			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 			// 记录本次录音的秒数
 			if (this.recorder) {
-				this.recorder.stop()
+				var mp3Blob = this.recorder.upload();
 				// 重置说话时间
 				this.num = 60;
-				// 获取语音二进制文件
-				let bold = this.recorder.getBlob();
-				console.log(bold);
 				// 将获取的二进制对象转为二进制文件流
-				let files = new File([bold], {
-					type: 'audio/mp3', lastModified: Date.now()
-				})
 				let fd = new FormData();
-				fd.append('myFile', files);
-				// let fd = new FormData();
-				// fd.append('myFile', bold, "recorder" + new Date().getTime() + ".mp3");
+				fd.append('myFile', mp3Blob, "recorder" + new Date().getTime() + ".mp3");
 				// 额外参数，可根据选择填写
 				// 这里是通过上传语音文件的接口，获取接口返回的路径作为语音路径
 				this.fd = fd;
+				this.recorder = new MP3Recorder(this.stream);
 			}
 		},
 		uploadFile(fd, callback) {
-			// this.recorder.upload(`${this.baseUrl}upload/voice?token=${this.params.token}&backend=${this.params.backend}&urid=${this.params.urid}`, (res => {
-			// 	console.log(res);
-			// }))
+			console.log(fd)
 			axios({
 				method: 'post',
 				url: this.baseUrl + 'upload/voice',
@@ -219,7 +230,6 @@ export default {
 		sendVoice() {
 			if (this.fd) {
 				this.uploadFile(this.fd, (res) => {
-					console.log(res);
 					let message = this.tim.createCustomMessage({
 						to: this.isGroup ? this.dialogueData.groupProfile.groupID : this.dialogueData.userProfile.userID,
 						conversationType: this.isGroup ? 'GROUP' : 'C2C',
@@ -232,9 +242,7 @@ export default {
 							description: "voice"
 						}
 					});
-					console.log(message);
 					this.tim.sendMessage(message).then(res => {
-						console.log(res);
 						this.$emit('sendSuccess', res.data.message)
 					})
 					this.val = '';

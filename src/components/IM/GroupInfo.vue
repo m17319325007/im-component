@@ -70,11 +70,13 @@ export default {
 				cancelButtonText: '取消',
 				type: 'warning'
 			}).then(() => {
-				this.tim.quitGroup({ groupID: this.dialogueData.groupProfile.groupID }).then((imResponse) => {
+				console.log(this.dialogueData.groupProfile);
+				this.tim.quitGroup(this.dialogueData.groupProfile.groupID).then((imResponse) => {
 					this.$message({
 						type: 'success',
 						message: '退出成功!'
 					});
+					this.$emit('exitGroup', true);
 					console.log(imResponse);
 				}).catch((imError) => {
 					console.warn('quitGroup error:', imError); // 退出群组失败的相关信息
@@ -126,7 +128,7 @@ export default {
 		}
 		.tc-news-group-item {
 			padding: 10px;
-			flex: 1;
+			width: 42px;
 			text-align: center;
 			cursor: pointer;
 			img {

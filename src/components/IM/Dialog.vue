@@ -1,10 +1,10 @@
 <template>
 	<div>
-		<div class="tc-dialog-modal" v-show="visible">
+		<div v-if="isModal" class="tc-dialog-modal" v-show="visible">
 		</div>
 		<transition name="dialog-fade" @after-enter="afterEnter" @after-leave="afterLeave">
-			<div class="tc-dialog-wrapper" v-show="visible" @click.self="handleClose">
-				<div class="tc-dialog" ref="dialog">
+			<div class="tc-dialog-wrapper" :class="isModal ? 'on' : ''" v-show="visible" @click.self="handleClose">
+				<div class="tc-dialog" :class="isModal ? '' : 'on'" ref="dialog">
 					<div class="tc-dialog-box">
 						<div class="tc-dialog-header" v-if="isHeader">
 							<div class="tc-dialog-title">
@@ -28,6 +28,10 @@
 export default {
 	name: 'Dialog',
 	props: {
+		isModal: {
+			type: Boolean,
+			default: false
+		},
 		isHeader: {
 			type: Boolean,
 			default: false
@@ -79,15 +83,17 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style lang="scss">
 .tc-dialog-wrapper {
-	z-index: 1995;
-	position: fixed;
-	left: 0;
-	top: 0;
-	right: 0;
-	bottom: 0;
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	position: relative;
+	&.on {
+		position: fixed;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+	}
 }
 .tc-dialog-modal {
 	position: fixed;
@@ -96,9 +102,13 @@ export default {
 	right: 0;
 	bottom: 0;
 	z-index: 1994;
-	background: rgba($color: #333, $alpha: 0.4);
+	background: rgba(33, 33, 33, 0.4);
 }
 .tc-dialog {
+	&.on {
+		position: fixed;
+		top: 150px;
+	}
 	.tc-dialog-box {
 		background: #fff;
 		border-radius: 2px;
