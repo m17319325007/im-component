@@ -82,6 +82,7 @@ export default {
 						this.audio.play();//audio.play();// 这个就是播放
 					});
 				} else {
+					this.playStatus = !this.playStatus;
 					this.audio.pause();// 这个就是暂停
 				}
 			} else {
