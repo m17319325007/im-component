@@ -1,5 +1,5 @@
 <template>
-	<div class="tc-message-item">
+	<div class="tc-message-item" v-if="messgeItem.type == 'TIMImageElem' || messgeItem.type == 'TIMTextElem' || (messgeItem.type == 'TIMSoundElem' || (messgeItem.type == 'TIMCustomElem' && messgeItem.payload.description == 'voice'))">
 		<div class="position" :class="messgeItem.flow == 'in' ? 'position-left' : 'position-right'">
 			<div class="tc-col-1">
 				<img v-if="isGroup" @click="userImgAction(messgeItem)" :src="messgeItem.flow == 'in' ? (messgeItem && messgeItem.avatar ? messgeItem.avatar : defaultUser) : (userData && userData.avatar ? userData.avatar : defaultUser)">

@@ -1,7 +1,7 @@
 <template>
 	<div class="tc-message-item-img">
 		<img @click="openView" class="tc-message-item-img-view" :src="message.imageInfoArray[0].imageUrl" alt="">
-		<el-dialog v-if="message.imageInfoArray" :visible.sync="dialogVisible" :width="width + 'px'">
+		<el-dialog :modal="false" v-if="message.imageInfoArray" :visible.sync="dialogVisible" :width="width + 'px'">
 			<img :src="message.imageInfoArray[0].imageUrl" :style="{width: width - 40 + 'px'}">
 		</el-dialog>
 	</div>

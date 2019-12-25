@@ -127,7 +127,7 @@ export default {
 			border-radius: 5px;
 		}
 		.tc-news-group-item {
-			padding: 10px;
+			margin: 10px;
 			width: 42px;
 			text-align: center;
 			cursor: pointer;

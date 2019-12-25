@@ -43,7 +43,7 @@
 					{{ userData.companyName }}
 				</span>
 			</div>
-			<div class="tc-personal-btn" @click="sendBtn">
+			<div v-if="userData.userID != isLoginUserId" class="tc-personal-btn" @click="sendBtn">
 				发消息
 			</div>
 		</div>
@@ -61,6 +61,10 @@ export default {
 			default() {
 				return {}
 			}
+		},
+		isLoginUserId: {
+			type: String,
+			default: ""
 		}
 	},
 	data() {

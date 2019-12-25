@@ -26,7 +26,7 @@
 					<!-- TODO -->
 					<!-- 当前只显示群聊通知和个人通知 -->
 					<li @click="itemClick(item.conversationID, userList, item)" v-for="(item, index) in userList" :key="index">
-						<div class="tc-news-list-item" :class="item.checked ? 'tc-news-list-item-active' : ''" v-if="(item.type == 'GROUP') ? (item.groupProfile.name.indexOf(inputVal) != -1) : (item.type == 'C2C') ? (item.userProfile.nick.indexOf(inputVal) != -1) : false">
+						<div class="tc-news-list-item" :class="item.checked ? 'tc-news-list-item-active' : ''" v-if="(item.type == 'GROUP') ? (item.groupProfile.groupName && item.groupProfile.groupName.indexOf(inputVal) != -1) : (item.type == 'C2C') ? (item.userProfile.nick.indexOf(inputVal) != -1) : false">
 							<div class="tc-news-list-box">
 								<img class="tc-news-list-user-photo" :src="item.type == 'GROUP' ? (item.groupProfile.avatar || defaultGroup) : (item.userProfile.avatar || defaultUser)" alt="">
 								<div class="tc-news-list-user-content">
@@ -46,7 +46,6 @@
 									</span>
 								</div>
 							</div>
-							<!-- {{ item.unreadCount }} -->
 							<div class="tc-news-msg-hint" v-if="item.unreadCount != 0">
 								{{ item.unreadCount > 99 ? 99 : item.unreadCount }}
 							</div>
@@ -73,7 +72,7 @@
 		</div>
 		<group-info :groupStatus.sync="groupStatus" :dialogueData="dialogueData" :isGroup="isGroup" :groupUserList="groupUserList" @exitGroup="exitGroup" @openUserDialog="openUserDialog"></group-info>
 		<Dialog :visible.sync="personalVisible">
-			<personal-data :userData="userData" @handlePersonalClose="handlePersonalClose" @send="sendMsg"></personal-data>
+			<personal-data :userData="userData" :isLoginUserId="loginData.userID" @handlePersonalClose="handlePersonalClose" @send="sendMsg"></personal-data>
 		</Dialog>
 	</div>
 </template>
@@ -221,12 +220,14 @@ export default {
 				console.log(event, '收到新消息');
 				// 如果消息来自当前聊天方
 				this.setMessageList(event.data);
-				this.$emit('dialogue', event.data)
 			})
 			// 会话列表更新
 			this.tim.on(this.TIM.EVENT.CONVERSATION_LIST_UPDATED, event => {
 				console.log(event, '会话更新列表');
 				this.getUserList(event.data);
+				if (event.data.length) {
+					this.dialogue(event.data);
+				}
 			})
 			// 群组列表更新
 			this.tim.on(this.TIM.EVENT.GROUP_LIST_UPDATED, event => {
@@ -250,6 +251,15 @@ export default {
 					})
 				this.$store.dispatch('getBlacklist')
 			}
+		},
+		dialogue(list) {
+			let num = 0;
+			list.forEach(item => {
+				if (item.type == "C2C" || item.type == "GROUP") {
+					num += item.unreadCount;
+				}
+			})
+			this.$emit('dialogue', num);
 		},
 		getUserList(list) {
 			this.userList = list;
@@ -397,6 +407,9 @@ export default {
 			this.tim.setMessageRead({ conversationID: conversationID }).then((res) => {
 				// 已读上报成功
 				console.log(res, '已读成功')
+				if (this.userList.length) {
+					this.dialogue(this.userList);
+				}
 			}).catch((imError) => {
 				// 已读上报失败
 				console.warn('setMessageRead error:', imError);
@@ -503,21 +516,29 @@ export default {
 		},
 		// 新消息更新
 		setMessageList(list) {
-			if (this.dialogueData.checked) {
-				// 		// 根据当前消息来源添加新消息
+			let obj = this.dialogueData;
+			if (obj.checked) {
+				// 根据当前消息来源添加新消息
 				list.forEach(res => {
-					if (res.conversationID == this.dialogueData.conversationID) {
+					if (obj.conversationID) {
+						if (res.conversationID == obj.conversationID) {
+							this.messageList.push(res);
+						}
+					} else if (res.from == obj.userProfile.userID) {
+						// 首次会话新来回复问题
+						obj = res;
 						this.messageList.push(res);
 					}
 				})
 				// 当前聊天已读
-				this.setMessageRead(this.dialogueData.conversationID);
+				this.setMessageRead(obj.conversationID);
 				this.scrollBottom();
 			}
 		},
 		// 发送消息成功 & 收到新消息
 		sendSuccess(obj) {
 			this.messageList.push(obj);
+			this.scrollTop();
 			this.scrollBottom();
 		},
 		// 新消息滚动到底部
@@ -526,6 +547,15 @@ export default {
 				let container = this.$el.querySelector(".tc-news-center-im");
 				if (container) {
 					container.scrollTop = container.scrollHeight;
+				}
+			})
+		},
+		// 会话滚动到顶部
+		scrollTop() {
+			this.$nextTick(() => {
+				let container = this.$el.querySelector(".tc-news-list");
+				if (container) {
+					container.scrollTop = 0;
 				}
 			})
 		},
@@ -548,6 +578,7 @@ export default {
 	watch: {
 		visible(val) {
 			if (val) {
+				this.isGroup = false;
 				this.scrollBottom();
 			}
 		},

@@ -107,7 +107,10 @@ export default {
 		this.$nextTick(() => {
 			try {
 				window.AudioContext = window.AudioContext || window.webkitAudioContext;
-				navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia;
+				navigator.getUserMedia = (navigator.getUserMedia ||
+					navigator.webkitGetUserMedia ||
+					navigator.mozGetUserMedia ||
+					navigator.msGetUserMedia);
 				window.URL = window.URL || window.webkitURL;
 
 				var audio_context = new AudioContext;
@@ -115,14 +118,25 @@ export default {
 			} catch (e) {
 				alert('No web audio support in this browser!');
 			}
-
-			navigator.getUserMedia({ audio: true }, (stream) => {
-				this.stream = stream;
-				this.recorder = new MP3Recorder(stream);
-				console.log('初始化完成');
-			}, function (e) {
-				console.log('No live audio input: ' + e);
-			});
+			if (navigator.getUserMedia) {
+				navigator.getUserMedia({ audio: true }, (stream) => {
+					this.stream = stream;
+					this.recorder = new MP3Recorder(stream);
+					console.log('初始化完成');
+				}, function (e) {
+					console.log('No live audio input: ' + e);
+				});
+			} else {
+				navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+					/* 使用这个stream stream */
+					this.stream = stream;
+					this.recorder = new MP3Recorder(stream);
+					console.log('初始化完成');
+				}).catch(function (e) {
+					/* 处理error */
+					console.log('No live audio input: ' + e);
+				})
+			}
 		})
 	},
 	watch: {
@@ -205,7 +219,6 @@ export default {
 			}
 		},
 		uploadFile(fd, callback) {
-			console.log(fd)
 			axios({
 				method: 'post',
 				url: this.baseUrl + 'upload/voice',
@@ -221,6 +234,7 @@ export default {
 		},
 		keyupSend(ev) {
 			if (ev && ev.keyCode === 13) {
+				this.val = this.val.substring(0, this.val.length - 1);
 				this.send(this.val)
 			}
 		},
