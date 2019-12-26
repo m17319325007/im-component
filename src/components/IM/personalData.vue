@@ -52,6 +52,7 @@
 
 <script>
 import goBack from '@/assets/images/IM/goBack.png';
+import defaultUser from '@/assets/images/IM/defaultUser.png';
 
 export default {
 	name: 'personalData',
@@ -69,7 +70,8 @@ export default {
 	},
 	data() {
 		return {
-			goBack: goBack
+			goBack: goBack,
+			defaultUser: defaultUser
 		}
 	},
 	methods: {

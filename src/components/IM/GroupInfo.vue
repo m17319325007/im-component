@@ -18,7 +18,7 @@
 						</div>
 					</li>
 				</ul>
-				<div class="tc-news-group-exit" @click="exitGroup">
+				<div class="tc-news-group-exit" v-if="dialogueData.groupProfile.name.indexOf('_6') > -1" @click="exitGroup">
 					退出群组
 				</div>
 			</div>
@@ -27,6 +27,8 @@
 </template>
 
 <script>
+import defaultUser from '@/assets/images/IM/defaultUser.png';
+
 export default {
 	name: 'GroupInfo',
 	props: {
@@ -53,7 +55,7 @@ export default {
 	},
 	data() {
 		return {
-
+			defaultUser: defaultUser
 		}
 	},
 	methods: {
