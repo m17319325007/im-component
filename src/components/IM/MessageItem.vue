@@ -75,9 +75,6 @@ export default {
 		messageVoice,
 		messageUndefined
 	},
-	created() {
-		console.log(this.user.dialogueUserData);
-	},
 	methods: {
 		userImgAction(item) {
 			this.$emit('userImg', item)

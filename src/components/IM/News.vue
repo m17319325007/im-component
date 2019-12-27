@@ -70,7 +70,7 @@
 				</div>
 			</div>
 		</div>
-		<group-info :groupStatus.sync="groupStatus" :dialogueData="dialogueData" :isGroup="isGroup" :groupUserList="groupUserList" @exitGroup="exitGroup" @openUserDialog="openUserDialog"></group-info>
+		<group-info :baseUrl="baseUrl" :params="params" :groupStatus.sync="groupStatus" :dialogueData="dialogueData" :isGroup="isGroup" :groupUserList="groupUserList" @exitGroup="exitGroup" @openUserDialog="openUserDialog"></group-info>
 		<Dialog :visible.sync="personalVisible">
 			<personal-data :userData="userData" :isLoginUserId="loginData.userID" @handlePersonalClose="handlePersonalClose" @send="sendMsg"></personal-data>
 		</Dialog>
@@ -363,7 +363,10 @@ export default {
 			}
 			if (list[i].type == 'C2C') {
 				// 获取当前对话人的信息
-				this.$store.commit('getUserInfo', list[i].userProfile)
+				this.$store.dispatch('getUserInfo', list[i].userProfile).then(res => {
+					list[i].userProfile.avatar = res.avatar;
+					list[i].userProfile.nick = res.nick;
+				})
 			}
 			if (type) {
 				this.isNewDialogue = true;

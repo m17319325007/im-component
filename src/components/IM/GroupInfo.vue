@@ -10,15 +10,17 @@
 				</span>
 			</div>
 			<div class="tc-news-group-content">
-				<ul class="tc-news-group-list">
-					<li class="tc-news-group-item" v-for="(item, i) in groupUserList" :key="i" @click="openUserDialog(item)">
-						<img :src="item.avatar || defaultUser" alt="">
-						<div class="tc-news-group-name">
-							{{ item.nick }}
-						</div>
-					</li>
-				</ul>
-				<div class="tc-news-group-exit" v-if="dialogueData.groupProfile.name.indexOf('_6') > -1" @click="exitGroup">
+				<div class="tc-news-group-list-box">
+					<ul class="tc-news-group-list">
+						<li class="tc-news-group-item" v-for="(item, i) in groupUserList" :key="i" @click="openUserDialog(item)">
+							<img :src="item.avatar || defaultUser" alt="">
+							<div class="tc-news-group-name">
+								{{ item.nick }}
+							</div>
+						</li>
+					</ul>
+				</div>
+				<div class="tc-news-group-exit" v-if="(dialogueData.groupProfile.name.indexOf('_6') > -1) || (dialogueData.groupProfile.name.indexOf('_5') > -1)" @click="exitGroup">
 					退出群组
 				</div>
 			</div>
@@ -28,10 +30,21 @@
 
 <script>
 import defaultUser from '@/assets/images/IM/defaultUser.png';
+import axios from 'axios';
 
 export default {
 	name: 'GroupInfo',
 	props: {
+		params: {
+			type: Object,
+			default() {
+				return {}
+			}
+		},
+		baseUrl: {
+			type: String,
+			default: ""
+		},
 		groupStatus: {
 			type: Boolean,
 			default: false
@@ -60,6 +73,7 @@ export default {
 	},
 	methods: {
 		closeGroupData() {
+			console.log(this.$store.state.user.userData);
 			this.$emit('update:groupStatus', false);
 		},
 		openUserDialog(item) {
@@ -72,17 +86,32 @@ export default {
 				cancelButtonText: '取消',
 				type: 'warning'
 			}).then(() => {
-				console.log(this.dialogueData.groupProfile);
-				this.tim.quitGroup(this.dialogueData.groupProfile.groupID).then((imResponse) => {
-					this.$message({
-						type: 'success',
-						message: '退出成功!'
+				console.log(this.baseUrl);
+				axios({
+					method: 'post',
+					url: this.baseUrl + 'group/exitgroup',
+					params: {
+						token: this.params.token,
+						backend: this.params.backend,
+						urid: this.params.urid
+					},
+					data: {
+						userId: this.$store.state.user.userData.userID,
+						GID: this.dialogueData.groupProfile.groupID
+					}
+				}).then(() => {
+					this.tim.quitGroup(this.dialogueData.groupProfile.groupID).then((imResponse) => {
+						this.$message({
+							type: 'success',
+							message: '退出成功!'
+						});
+						this.$emit('exitGroup', true);
+						console.log(imResponse);
+					}).catch((imError) => {
+						console.warn('quitGroup error:', imError); // 退出群组失败的相关信息
 					});
-					this.$emit('exitGroup', true);
-					console.log(imResponse);
-				}).catch((imError) => {
-					console.warn('quitGroup error:', imError); // 退出群组失败的相关信息
-				});
+				})
+
 			}).catch(() => { })
 		}
 	}
@@ -113,10 +142,13 @@ export default {
 		cursor: pointer;
 		font-size: 14px;
 	}
+	.tc-news-group-list-box {
+		height: 460px;
+	}
 	.tc-news-group-list {
 		display: flex;
 		flex-wrap: wrap;
-		height: 460px;
+		max-height: 460px;
 		overflow: auto;
 		&::-webkit-scrollbar {
 			width: 8px;

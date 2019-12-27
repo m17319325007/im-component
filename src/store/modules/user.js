@@ -12,17 +12,6 @@ const user = {
       state.userData = userData;
       console.log(userData, '个人信息')
     },
-    getUserInfo(state, obj) {
-      tim.getUserProfile({
-        userIDList: [obj.userID]
-      }).then(res => {
-        state.dialogueUserData = res.data[0];
-        state.dialogueUserData.job = obj.job;
-        state.dialogueUserData.companyName = obj.companyName;
-        state.dialogueUserData.carNumber = obj.carNumber;
-        state.dialogueUserData.tel = obj.tel;
-      })
-    },
     toggleIsLogin(state, isLogin) {
       state.isLogin = typeof isLogin === 'undefined' ? !state.isLogin : isLogin
     },
@@ -37,6 +26,20 @@ const user = {
     }
   },
   actions: {
+    getUserInfo(context, obj) {
+      return new Promise((resolve) => {
+        tim.getUserProfile({
+          userIDList: [obj.userID]
+        }).then(res => {
+          context.state.dialogueUserData = res.data[0];
+          context.state.dialogueUserData.job = obj.job;
+          context.state.dialogueUserData.companyName = obj.companyName;
+          context.state.dialogueUserData.carNumber = obj.carNumber;
+          context.state.dialogueUserData.tel = obj.tel;
+          resolve(context.state.dialogueUserData);
+        })
+      })
+    },
     login(context, obj) {
       return new Promise((resolve) => {
         tim
