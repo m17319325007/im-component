@@ -3,16 +3,18 @@
 	<div class="tc-news-center-input">
 		<template v-if="voice">
 			<div class="voice-box">
-				<div class="voice-border"  @mousedown.prevent="mouseStart"  @mouseup.prevent="mouseEnd">
-					<canvas id="myCanvas">当前浏览器不支持canvas组件请升级！</canvas>
-					<img src="@/assets/images/IM/voiceBig.png" alt="">
-					<span class="voice-hint" v-if="isVoiceHint != 0">
+				<canvas id="myCanvas">当前浏览器不支持canvas组件请升级！</canvas>
+				<div class="voice-border">
+					<div class="voice-img" @mousedown.prevent="mouseStart"  @mouseup.prevent="mouseEnd">
+						<img src="@/assets/images/IM/voiceBig.png" alt="">
+					</div>
+					<span class="voice-hint">
 						长按录音
 					</span>
 				</div>
 				<div class="tc-news-center-send tc-news-center-send-voice">
 					<span class="tc-news-center-send-btn" @click="cancelVoice(val)">
-						取消
+						重录
 					</span>
 					<span class="tc-news-center-send-btn" @click="sendVoice(val)">
 						发送
@@ -168,6 +170,7 @@ export default {
 		},
 		// 长按说话
 		mouseStart() {
+			this.voiceNum = 0;
 			if (!this.recorder) {
 				this.$message.error('未找到请求设备');
 				return;
@@ -391,20 +394,35 @@ export default {
 	align-items: center;
 	justify-content: center;
 	height: 100%;
+	position: relative;
 	.voice-border {
-		width: 60px;
-		height: 60px;
-		border: 3px solid #dadeed;
-		box-sizing: border-box;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 60px;
-		position: relative;
-		cursor: pointer;
+		.voice-img {
+			width: 60px;
+			height: 60px;
+			border: 3px solid #dadeed;
+			box-sizing: border-box;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 60px;
+			position: relative;
+			cursor: pointer;
+			&:before {
+				position: absolute;
+				left: -2px;
+				top: -2px;
+				width: 60px;
+				height: 60px;
+				content: "";
+				z-index: 10;
+			}
+		}
 		.voice-hint {
 			position: absolute;
-			left: -124px;
+			left: 40px;
 			width: 112px;
 			height: 24px;
 			line-height: 24px;
@@ -417,11 +435,13 @@ export default {
 	}
 	#myCanvas {
 		position: absolute;
+		z-index: 5;
 	}
 	.tc-news-center-send-voice {
 		position: absolute;
 		right: 20px;
 		bottom: 10px;
+		z-index: 5;
 		span {
 			margin-left: 10px;
 			&:first-child {

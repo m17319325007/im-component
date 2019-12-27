@@ -108,6 +108,7 @@ export default {
 	&.on {
 		position: fixed;
 		top: 150px;
+		z-index: 1993;
 	}
 	.tc-dialog-box {
 		background: #fff;

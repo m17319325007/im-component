@@ -25,7 +25,7 @@
 				<ul class="tc-news-list">
 					<!-- TODO -->
 					<!-- 当前只显示群聊通知和个人通知 -->
-					<li @click="itemClick(item.conversationID, userList, item)" v-for="(item, index) in userList" :key="index">
+					<li @click="itemClick(item.conversationID || item.userProfile.userID, userList, item)" v-for="(item, index) in userList" :key="index">
 						<div class="tc-news-list-item" :class="item.checked ? 'tc-news-list-item-active' : ''" v-if="(item.type == 'GROUP') ? (item.groupProfile.groupName && item.groupProfile.groupName.indexOf(inputVal) != -1) : (item.type == 'C2C') ? (item.userProfile.nick.indexOf(inputVal) != -1) : false">
 							<div class="tc-news-list-box">
 								<img class="tc-news-list-user-photo" :src="item.type == 'GROUP' ? (item.groupProfile.avatar || defaultGroup) : (item.userProfile.avatar || defaultUser)" alt="">
@@ -71,15 +71,14 @@
 			</div>
 		</div>
 		<group-info :baseUrl="baseUrl" :params="params" :groupStatus.sync="groupStatus" :dialogueData="dialogueData" :isGroup="isGroup" :groupUserList="groupUserList" @exitGroup="exitGroup" @openUserDialog="openUserDialog"></group-info>
-		<Dialog :visible.sync="personalVisible">
+		<el-dialog top="200px" :modal="false" title="提示" :visible.sync="personalVisible" width="260px" center>
 			<personal-data :userData="userData" :isLoginUserId="loginData.userID" @handlePersonalClose="handlePersonalClose" @send="sendMsg"></personal-data>
-		</Dialog>
+		</el-dialog>
 	</div>
 </template>
 
 <script>
 
-import Dialog from './Dialog.vue';
 import personalData from './personalData.vue';
 import MessageItem from './MessageItem.vue';
 import MessageSend from './MessageSend.vue';
@@ -158,8 +157,7 @@ export default {
 		'message-item': MessageItem,
 		'message-send': MessageSend,
 		'group-info': GroupInfo,
-		'toolbar': Toolbar,
-		Dialog,
+		'toolbar': Toolbar
 	},
 	data() {
 		return {
@@ -278,6 +276,7 @@ export default {
 				})
 			}
 			this.isChatWindow = false;
+			this.groupStatus = false;
 			this.$emit('close', false);
 		},
 		// 关闭个人信息弹框
@@ -324,8 +323,14 @@ export default {
 					this.ouid = id;
 					this.$set(res, 'checked', true);
 				} else {
-					this.$set(res, 'checked', false);
+					if (res.type == 'C2C' && (res.userProfile.userID == id)) {
+						this.ouid = id;
+						this.$set(res, 'checked', true);
+					} else {
+						this.$set(res, 'checked', false);
+					}
 				}
+
 			})
 			if (type) {
 				item.checked = true;
@@ -347,6 +352,7 @@ export default {
 					// 当前聊天对象为群组
 					// 获取群组所有成员
 					// 群组-加载群组成员所有详细资料
+					this.groupUserList = [];
 					this.getGroupUserList(list[i]);
 				} else {
 					this.isGroup = false;
@@ -419,24 +425,38 @@ export default {
 			});
 		},
 		// 获取群组成员
-		getGroupUserList(obj) {
-			this.tim.getGroupMemberList({ groupID: obj.groupProfile.groupID, count: 100, offset: 0 }).then(imResponse => {
-				this.groupUserList = imResponse.data.memberList;
-				let str = '';
-				this.groupUserList.forEach((item, index) => {
-					if (index) {
-						str += ',' + item.userID;
-					} else {
-						str += item.userID;
-					}
-				})
-				// 设置成员信息及获取聊天记录设置用户资料
-				this.getUserListInfo(str, (res) => {
-					this.sw_userList = res.list;
-					this.setUserInfo(this.groupUserList, this.sw_userList);
-					this.conversationID = obj.conversationID;
-					this.getMessageList(this.conversationID);
-				});
+		getGroupUserList(obj, offset = 0) {
+			this.getGroupUserListAll(obj.groupProfile.groupID, offset, (res) => {
+				if (res.length) {
+					res.forEach(item => {
+						this.groupUserList.push(item);
+					})
+				}
+				if (res.length == 100) {
+					this.getGroupUserList(obj, this.groupUserList.length);
+				} else {
+					let str = '';
+					this.groupUserList.forEach((item, index) => {
+						if (index) {
+							str += ',' + item.userID;
+						} else {
+							str += item.userID;
+						}
+					})
+					// 设置成员信息及获取聊天记录设置用户资料
+					this.getUserListInfo(str, (res) => {
+						this.sw_userList = res.list;
+						this.setUserInfo(this.groupUserList, this.sw_userList);
+						this.conversationID = obj.conversationID;
+						this.getMessageList(this.conversationID);
+					});
+				}
+			})
+		},
+		// 获取群组成员
+		getGroupUserListAll(id, offset, callback) {
+			this.tim.getGroupMemberList({ groupID: id, count: 100, offset: offset }).then(imResponse => {
+				callback(imResponse.data.memberList)
 			})
 		},
 		// 获取用户信息-思伟后台
@@ -851,6 +871,13 @@ span {
 		font-size: 12px;
 		color: #999;
 		padding: 12px 20px;
+	}
+	.el-dialog__header {
+		display: none;
+	}
+
+	.el-dialog--center .el-dialog__body {
+		padding: 0;
 	}
 }
 </style>
