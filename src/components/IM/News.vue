@@ -287,13 +287,15 @@ export default {
 		sendMsg(obj) {
 			let flag = 0;
 			let data = {};
+			this.groupStatus = false;
+			this.isGroup = false;
 			this.userList.forEach(item => {
 				if (item.userProfile && item.userProfile.userID == obj.userID) {
 					flag = 1;
 					data = item;
 				}
 			})
-			if (flag) {
+			if (flag && data.conversationID) {
 				this.itemClick(data.conversationID, this.userList, data);
 			} else {
 				// 新对话 初始化
@@ -308,7 +310,9 @@ export default {
 				this.ouid = obj.userID;
 				this.dialogueData = obj;
 				this.isCompleted = 1;
-				this.userList.push(obj);
+				if (!flag) {
+					this.userList.push(obj);
+				}
 				this.itemClick(obj.userID, this.userList, obj, 1);
 			}
 		},
@@ -332,11 +336,6 @@ export default {
 				}
 
 			})
-			if (type) {
-				item.checked = true;
-				this.groupStatus = false;
-				this.isGroup = false;
-			}
 
 			if (!this.isChatWindow) {
 				this.isChatWindow = true;
@@ -346,9 +345,15 @@ export default {
 			if (flag) {
 				list[i].checked = true;
 				this.groupStatus = false;
+				this.dialogueData = list[i];
 				// 点击项为群组消息
 				if (list[i].type == 'GROUP') {
 					this.isGroup = true;
+					this.groupList.forEach(item => {
+						if (item.imGroupId == this.dialogueData.groupProfile.groupID) {
+							this.dialogueData.groupProfile.TCGroupID = item.groupId;
+						}
+					})
 					// 当前聊天对象为群组
 					// 获取群组所有成员
 					// 群组-加载群组成员所有详细资料
@@ -365,7 +370,6 @@ export default {
 					this.setMessageRead(list[i].conversationID);
 					// 当前聊天用户有
 				}
-				this.dialogueData = list[i];
 			}
 			if (list[i].type == 'C2C') {
 				// 获取当前对话人的信息
@@ -584,12 +588,21 @@ export default {
 		},
 		// 查看用户详细资料
 		handleUserImg(item) {
-			this.groupUserList.forEach(res => {
-				if (res.userID == item.from) {
-					this.personalVisible = true;
-					this.userData = res;
+			if (this.isGroup) {
+				this.groupUserList.forEach(res => {
+					if (res.userID == item.from) {
+						this.personalVisible = true;
+						this.userData = res;
+					}
+				})
+			} else {
+				this.personalVisible = true;
+				if (item.flow == 'in') {
+					this.userData = this.$store.state.user.dialogueUserData;
+				} else {
+					this.userData = this.$store.state.user.userData;
 				}
-			})
+			}
 		},
 		logout() {
 			this.tim.logout().then(imResponse => {

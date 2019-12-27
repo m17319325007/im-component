@@ -33,6 +33,7 @@ const user = {
         }).then(res => {
           context.state.dialogueUserData = res.data[0];
           context.state.dialogueUserData.job = obj.job;
+          context.state.dialogueUserData.avatar = obj.avatar;
           context.state.dialogueUserData.companyName = obj.companyName;
           context.state.dialogueUserData.carNumber = obj.carNumber;
           context.state.dialogueUserData.tel = obj.tel;

@@ -29,6 +29,8 @@
 </template>
 
 <script>
+/* eslint-disable */
+
 import defaultUser from '@/assets/images/IM/defaultUser.png';
 import axios from 'axios';
 
@@ -73,7 +75,7 @@ export default {
 	},
 	methods: {
 		closeGroupData() {
-			console.log(this.$store.state.user.userData);
+
 			this.$emit('update:groupStatus', false);
 		},
 		openUserDialog(item) {
@@ -81,12 +83,15 @@ export default {
 		},
 		// 退出群组
 		exitGroup() {
+			let userId = this.$store.state.user.userData.userID;
+			if (userId.indexOf('TC') > -1) {
+				userId = userId.split("TC")[1];
+			}
 			this.$confirm('您确定要退出此群组？', '提示', {
 				confirmButtonText: '确定',
 				cancelButtonText: '取消',
 				type: 'warning'
 			}).then(() => {
-				console.log(this.baseUrl);
 				axios({
 					method: 'post',
 					url: this.baseUrl + 'group/exitgroup',
@@ -96,20 +101,25 @@ export default {
 						urid: this.params.urid
 					},
 					data: {
-						userId: this.$store.state.user.userData.userID,
-						GID: this.dialogueData.groupProfile.groupID
+						userId: userId,
+						GID: this.dialogueData.groupProfile.TCGroupID
 					}
-				}).then(() => {
-					this.tim.quitGroup(this.dialogueData.groupProfile.groupID).then((imResponse) => {
-						this.$message({
-							type: 'success',
-							message: '退出成功!'
+				}).then((res) => {
+					if (res.data.code == 200) {
+						this.tim.quitGroup(this.dialogueData.groupProfile.groupID).then((imResponse) => {
+							this.$message({
+								type: 'success',
+								message: '退出成功!'
+							});
+							this.$emit('exitGroup', true);
+							console.log(imResponse);
+						}).catch((imError) => {
+							console.warn('quitGroup error:', imError); // 退出群组失败的相关信息
 						});
-						this.$emit('exitGroup', true);
-						console.log(imResponse);
-					}).catch((imError) => {
-						console.warn('quitGroup error:', imError); // 退出群组失败的相关信息
-					});
+					} else {
+						this.$message.error('退出群组失败');
+					}
+
 				})
 
 			}).catch(() => { })
