@@ -36,7 +36,7 @@
 
 <script>
 /* eslint-disable */
-import { MP3Recorder } from '@/utils/recordermp3.js';
+import Recorderx, { ENCODE_TYPE } from 'recorderx';
 import axios from 'axios';
 export default {
 	name: 'MessageSend',
@@ -139,7 +139,7 @@ export default {
 			if (navigator.getUserMedia) {
 				navigator.getUserMedia({ audio: true }, (stream) => {
 					this.stream = stream;
-					this.recorder = new MP3Recorder(stream);
+					this.recorder = new Recorderx(stream);
 					console.log('初始化完成');
 				}, function (e) {
 					console.log('No live audio input: ' + e);
@@ -148,7 +148,7 @@ export default {
 				navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
 					/* 使用这个stream stream */
 					this.stream = stream;
-					this.recorder = new MP3Recorder(stream);
+					this.recorder = new Recorderx(stream);
 					console.log('初始化完成');
 				}).catch(function (e) {
 					/* 处理error */
@@ -186,7 +186,7 @@ export default {
 			this.toCanvas('myCanvas', 120)
 			this.interval = setInterval(() => {
 				if (this.num <= 0) {
-					this.recorder.stop()
+					this.recorder.pause()
 					this.num = 60
 					this.clearTimer()
 				} else {
@@ -213,7 +213,9 @@ export default {
 			this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 			// 记录本次录音的秒数
 			if (this.recorder) {
-				var mp3Blob = this.recorder.upload();
+				var mp3Blob = this.recorder.getRecord({
+					encodeTo: ENCODE_TYPE.WAV,
+				});
 				// 重置说话时间
 				this.num = 60;
 				// 将获取的二进制对象转为二进制文件流
@@ -222,7 +224,7 @@ export default {
 				// 额外参数，可根据选择填写
 				// 这里是通过上传语音文件的接口，获取接口返回的路径作为语音路径
 				this.fd = fd;
-				this.recorder = new MP3Recorder(this.stream);
+				this.recorder = new Recorderx(this.stream);
 			}
 		},
 		uploadFile(fd, callback) {

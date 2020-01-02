@@ -379,6 +379,7 @@ export default {
 				})
 			}
 			if (type) {
+				item.checked = true;
 				this.isNewDialogue = true;
 			} else {
 				this.isNewDialogue = false;
